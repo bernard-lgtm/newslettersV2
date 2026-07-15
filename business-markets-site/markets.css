@@ -1,0 +1,505 @@
+/* ============================================================
+   Market Moves V4 — THREE stacked, independently-exportable
+   Business Maverick cards (.mm), built on dm-tokens.css:
+     A. Market Moves — the unified indices / FX / commodities table
+        (carried over from V3, unchanged in look).
+     B. Crypto Market Moves — BTC/ETH/XRP/SOL/BNB, price in USD & ZAR,
+        24h and 365-day change.
+     C. Crypto Fear & Greed Index — a semicircular sentiment gauge.
+   Each card is its own PNG export block: a small on-screen toolbar
+   (not captured) sits above a white DM card (captured) that carries
+   the masthead, title, live cap, content and source line.
+     • One navy column-header band is the only heavy blue element.
+     • Missing data shows an em dash, never invented numbers.
+   ============================================================ */
+.mm, .mm * { box-sizing: border-box; }
+
+.mm {
+  --navy: #17233f;
+  --navy-2: #1f3157;
+  --rule-strong: #17233f;
+  min-height: 100vh;
+  background:
+    radial-gradient(1200px 520px at 50% -180px, #ffffff 0%, rgba(255,255,255,0) 70%),
+    #ECEAE4;
+  color: var(--dm-ink-1);
+  font-family: var(--font-ui);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 12px;
+}
+
+/* ---------- top toolbar (screen chrome, not exported) ---------- */
+.mm-bar { text-align: center; padding: 30px 20px 0; }
+.mm-kicker {
+  font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--dm-red);
+  margin-bottom: 14px;
+}
+.mm-controls {
+  display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;
+}
+.mm-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--dm-ink-3); background: #fff; border: 1px solid var(--dm-grey-1);
+  padding: 8px 14px; border-radius: 999px; white-space: nowrap;
+}
+.mm-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dm-ink-5); flex: 0 0 auto; }
+.mm-pill.live, .mm-pill.partial { color: var(--dm-ink-2); }
+.mm-pill.live .dot, .mm-pill.partial .dot {
+  background: var(--dm-green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dm-green) 22%, transparent);
+  animation: mm-pulse 2s ease-in-out infinite;
+}
+.mm-pill.cached { color: var(--dm-ink-3); }
+.mm-pill.cached .dot { background: var(--dm-blue); }
+.mm-pill.nodata { color: var(--dm-ink-3); border-color: var(--dm-grey-2); }
+.mm-pill.nodata .dot { background: var(--dm-ink-5); }
+@keyframes mm-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+.mm-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer;
+  padding: 8px 14px; border-radius: var(--radius-btn);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.14s ease;
+}
+.mm-btn svg { width: 13px; height: 13px; }
+.mm-btn:disabled { opacity: 0.6; cursor: default; }
+.mm-btn-ghost { background: #fff; border: 1px solid var(--dm-grey-2); color: var(--dm-ink-2); }
+.mm-btn-ghost:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-btn); }
+.mm-btn-primary { background: var(--dm-red-cta); border: 1px solid var(--dm-red-dark); color: #fff; }
+.mm-btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: var(--shadow-btn); background: #b51f1f; }
+.mm-btn svg.spin { animation: mm-spin 0.9s linear infinite; }
+@keyframes mm-spin { to { transform: rotate(360deg); } }
+.mm-updated {
+  font-family: var(--font-ui); font-size: 11.5px; color: var(--dm-ink-4);
+  margin: 12px auto 0; letter-spacing: 0.02em;
+}
+.mm-toast {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+  background: var(--dm-ink-1); color: #fff; font-family: var(--font-ui);
+  font-size: 12px; font-weight: 600; letter-spacing: 0.03em;
+  padding: 9px 16px; border-radius: 999px; z-index: 60;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  animation: mm-toast-in 0.18s ease;
+}
+@keyframes mm-toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* ---------- per-block wrapper + on-screen block toolbar (NOT exported) ---------- */
+.mm-block { width: min(790px, 100%); margin: 0 auto; padding: 6px 20px 30px; }
+.mm-block + .mm-block { border-top: 1px solid var(--dm-grey-1); padding-top: 26px; }
+.mm-blockbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.mm-blockbar-left { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.mm-block-eyebrow {
+  font-family: var(--font-ui); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--dm-ink-4);
+  white-space: nowrap;
+}
+.mm-blockbar-right { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- the exportable panel (THE big white card) ---------- */
+.mm-panel {
+  width: 100%;
+  background: #fff; border: 1px solid var(--dm-grey-1); border-radius: 16px;
+  box-shadow: 0 10px 34px rgba(0,0,0,0.09);
+  padding: 28px 36px 20px;
+  overflow: hidden;
+}
+
+/* panel header (branding — travels into the PNG) */
+.mm-panel-head { text-align: center; padding-bottom: 18px; border-bottom: 2px solid var(--dm-ink-1); margin-bottom: 22px; }
+
+/* bare panel — the table is the whole export (no branding head / footer / chrome) */
+.mm-panel-bare { padding: 0; border: none; box-shadow: none; border-radius: 12px; background: transparent; }
+.mm-mast-sm { width: 232px; max-width: 66%; height: auto; display: block; margin: 0 auto 12px; }
+.mm-panel-title {
+  font-family: var(--font-display); font-weight: 700; font-size: 32px; line-height: 1;
+  letter-spacing: 0.006em; color: var(--dm-ink-1); margin: 0;
+}
+.mm-panel-cap {
+  display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+  margin-top: 11px; font-family: var(--font-ui); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.03em; color: var(--dm-ink-4);
+}
+.mm-cap-sep { color: var(--dm-grey-2); }
+.mm-cap-live { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.mm-cap-live .d { width: 7px; height: 7px; border-radius: 50%; }
+.mm-cap-live.on { color: var(--dm-green); } .mm-cap-live.on .d { background: var(--dm-green); }
+.mm-cap-live.mixed { color: var(--dm-green); } .mm-cap-live.mixed .d { background: var(--dm-green); }
+.mm-cap-live.cached { color: var(--dm-blue); } .mm-cap-live.cached .d { background: var(--dm-blue); }
+.mm-cap-live.off { color: var(--dm-ink-4); } .mm-cap-live.off .d { background: var(--dm-ink-5); }
+
+/* ================= the unified table ================= */
+.mm-table {
+  border: 1px solid var(--dm-grey-1); border-radius: 12px; overflow: hidden;
+}
+/* last row meets the table's rounded edge so the bottom corners round too */
+.mm-table:not(.crypto) .mm-tr:last-child .mm-c { padding-bottom: 20px; }
+
+/* shared column geometry for header + every row */
+.mm-thead, .mm-tr {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 2.1fr)    /* market        */
+    minmax(0, 1.25fr)   /* price         */
+    minmax(0, 1.3fr)    /* 24h           */
+    minmax(0, 1.1fr)    /* 1 month zone  */
+    minmax(0, 1.1fr);   /* ytd zone      */
+  align-items: center;
+}
+
+/* navy column-header band — the single deliberate block of brand blue */
+.mm-thead {
+  background: linear-gradient(180deg, var(--navy-2), var(--navy));
+  color: #fff;
+}
+.mm-th {
+  padding: 18px 16px;
+  font-family: var(--font-ui); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.11em; text-transform: uppercase; color: rgba(255,255,255,0.82);
+}
+/* leading title cell — larger, tighter, full white */
+.mm-thead .mm-th:first-child {
+  font-size: 13px; letter-spacing: 0.05em; color: #fff;
+}
+/* extra breathing room on the left edge (where the title / rows start)
+   and the right edge (year-to-date lane) inside the card. The .mm-tr
+   qualifier lifts specificity above the .mm-c shorthand so data rows and
+   the header title all line up on the same inset line. */
+.mm-thead .mm-th:first-child, .mm-tr .mm-c-market { padding-left: 32px; }
+.mm-th-ytd, .mm-tr .mm-c-ytd { padding-right: 32px; }
+.mm-th.r { text-align: right; }
+.mm-th.c { text-align: center; }
+.mm-th-ytd, .mm-th-1m { border-left: 2px solid rgba(255,255,255,0.28); color: #fff; }
+
+/* data rows */
+.mm-tr { background: #fff; }
+.mm-tr + .mm-tr { border-top: 1px solid var(--dm-grey-1); }
+/* group boundaries — darker, heavier rule that collects rows into sections
+   (indices | FX | commodities | crypto) */
+.mm-tr + .mm-tr.mm-tr-group { border-top: 2px solid var(--dm-ink-1); }
+
+.mm-c { padding: 13px 16px; min-width: 0; }
+
+/* market identity cell */
+.mm-c-market { display: flex; align-items: center; gap: 12px; }
+.mm-idtext { min-width: 0; display: flex; flex-direction: column; gap: 2px; justify-content: center; }
+.mm-name { font-family: var(--font-ui); font-size: 17px; font-weight: 700; letter-spacing: -0.015em; color: var(--dm-ink-1); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mm-sym { display: none; }
+
+/* price cell */
+.mm-c-price { text-align: right; }
+.mm-value { font-family: var(--font-ui); font-size: 22px; font-weight: 700; line-height: 1; color: var(--dm-ink-1); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; white-space: nowrap; }
+.mm-value.long { font-size: 18px; }
+.mm-value.dash { color: var(--dm-ink-5); font-weight: 600; }
+
+/* 24h cell */
+.mm-c-24h { display: flex; justify-content: flex-start; }
+.mm-daychip { display: inline-flex; align-items: center; gap: 5px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 6px 13px; border-radius: 999px; white-space: nowrap; }
+.mm-daychip.up { color: var(--dm-green); background: color-mix(in srgb, var(--dm-green) 12%, #fff); }
+.mm-daychip.down { color: var(--dm-red); background: color-mix(in srgb, var(--dm-red) 10%, #fff); }
+.mm-daychip.flat { color: var(--dm-ink-5); background: var(--dm-grey-3); }
+.mm-arrow { width: 8px; height: 8px; flex: 0 0 auto; }
+.mm-daychip .mm-arrow { width: 10px; height: 10px; }
+.mm-daychip.up .mm-arrow, .mm-pctval.up .mm-arrow { fill: var(--dm-green); }
+.mm-daychip.down .mm-arrow, .mm-pctval.down .mm-arrow { fill: var(--dm-red); }
+
+/* 1 month zone — mirrors the year-to-date lane: divider + directional tint + text only */
+.mm-c-1m {
+  border-left: 2px solid var(--rule-strong);
+  background: var(--dm-grey-3);
+  text-align: center;
+}
+.mm-c-1m.up   { background: color-mix(in srgb, var(--dm-green) 12%, #fff); }
+.mm-c-1m.down { background: color-mix(in srgb, var(--dm-red) 10%, #fff); }
+.mm-c-1m.flat { background: var(--dm-grey-3); }
+.mm-pctval { display: inline-flex; align-items: center; gap: 5px; justify-content: center; font-family: var(--font-ui); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mm-pctval.up { color: var(--dm-green); }
+.mm-pctval.down { color: var(--dm-red); }
+.mm-pctval.flat { color: var(--dm-ink-5); }
+
+/* year-to-date zone — the DISTINCT divider + directional tinted lane
+   (whole cell tinted light-green / light-red like the daychips) */
+.mm-c-ytd {
+  border-left: 2px solid var(--rule-strong);
+  background: var(--dm-grey-3);
+  text-align: center;
+}
+.mm-c-ytd.up   { background: color-mix(in srgb, var(--dm-green) 12%, #fff); }
+.mm-c-ytd.down { background: color-mix(in srgb, var(--dm-red) 10%, #fff); }
+.mm-c-ytd.flat { background: var(--dm-grey-3); }
+.mm-ytd-val { display: inline-flex; align-items: center; gap: 5px; justify-content: center; font-family: var(--font-ui); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mm-ytd-val.up { color: var(--dm-green); }
+.mm-ytd-val.down { color: var(--dm-red); }
+.mm-ytd-val.flat { color: var(--dm-ink-5); }
+
+/* per-row status flag (small, unobtrusive, right of the name) */
+.mm-flag-tag {
+  display: none;
+  flex: 0 0 auto; align-items: center; gap: 4px;
+  font-family: var(--font-ui); font-size: 8.5px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; padding: 2px 6px; border-radius: 999px; white-space: nowrap;
+}
+.mm-flag-tag .d { width: 5px; height: 5px; border-radius: 50%; flex: 0 0 auto; }
+.mm-flag-tag.on { color: var(--dm-green); background: color-mix(in srgb, var(--dm-green) 13%, #fff); }
+.mm-flag-tag.on .d { background: var(--dm-green); }
+.mm-flag-tag.cached { color: var(--dm-blue); background: color-mix(in srgb, var(--dm-blue) 12%, #fff); }
+.mm-flag-tag.cached .d { background: var(--dm-blue); }
+.mm-flag-tag.off { color: var(--dm-ink-4); background: var(--dm-grey-3); }
+.mm-flag-tag.off .d { background: var(--dm-ink-5); }
+
+/* mobile-only inline labels (hidden on desktop table) */
+.mm-c-label { display: none; font-family: var(--font-ui); font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dm-ink-5); margin-bottom: 4px; }
+
+/* =====================================================================
+   market identity badges — flag coins, currency pairs, commodity &
+   crypto coins. Round "coin" language, unboxed.
+   ===================================================================== */
+.mm-badge {
+  flex: 0 0 auto; position: relative;
+  width: 40px; height: 40px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.mm-asset-ph { border-radius: 50%; background: var(--dm-grey-2); display: block; }
+
+/* index — stock-market chart coin with a small country-flag chip */
+.mm-badge-fill {
+  width: 40px; height: 40px; border-radius: 50%; object-fit: cover; display: block;
+  box-shadow: 0 1px 3px rgba(23,35,63,0.24), inset 0 0 0 1px rgba(255,255,255,0.55);
+}
+.mm-badge-index .mm-asset-ph { width: 40px; height: 40px; }
+.mm-badge-market {
+  width: 40px; height: 40px; border-radius: 50%; color: #fff; overflow: visible;
+  background: linear-gradient(150deg, #2f83c2, #17547f);
+  box-shadow: 0 1px 3px rgba(23,35,63,0.24), inset 0 0 0 1px rgba(255,255,255,0.18);
+}
+.mm-glyph-market { width: 26px; height: 26px; }
+.mm-badge-flagchip {
+  position: absolute; right: -3px; bottom: -3px;
+  width: 18px; height: 18px; border-radius: 50%; overflow: hidden;
+  box-shadow: 0 0 0 2px #fff, 0 1px 2px rgba(0,0,0,0.28);
+}
+.mm-badge-flagchip .mm-flagchip-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mm-badge-flagchip .mm-asset-ph { width: 100%; height: 100%; }
+.mm-badge-chip {
+  position: absolute; right: -3px; bottom: -3px;
+  width: 19px; height: 19px; border-radius: 50%;
+  background: var(--dm-green); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 2px #fff, 0 1px 2px rgba(0,0,0,0.28);
+}
+.mm-badge-chip svg { width: 11px; height: 11px; }
+
+/* fx — two overlapping flag coins (from → to) */
+.mm-badge-fx { width: 52px; }
+.mm-badge-fx .mm-coin {
+  position: absolute; top: 50%; width: 30px; height: 30px;
+  border-radius: 50%; object-fit: cover; display: block; transform: translateY(-50%);
+  box-shadow: 0 1px 3px rgba(23,35,63,0.22), inset 0 0 0 1px rgba(255,255,255,0.6);
+}
+.mm-badge-fx .mm-coin-back  { left: 0;  z-index: 1; }
+.mm-badge-fx .mm-coin-front { left: 20px; z-index: 2; box-shadow: 0 1px 3px rgba(23,35,63,0.22), 0 0 0 2px #fff; }
+/* fx — single flag (currency vs rand implied) */
+.mm-badge-fx-solo { width: 40px; }
+.mm-badge-fx-solo .mm-coin-solo {
+  position: static; transform: none; left: auto; top: auto;
+  width: 40px; height: 40px;
+}
+.mm-badge-fx-solo .mm-asset-ph { width: 40px; height: 40px; border-radius: 50%; }
+
+/* commodity — themed coin + icon */
+.mm-badge-commodity {
+  width: 40px; height: 40px; border-radius: 50%; color: #fff;
+  box-shadow: 0 1px 3px rgba(23,35,63,0.24), inset 0 0 0 1px rgba(255,255,255,0.16);
+}
+.mm-badge-commodity.barrel   { background: linear-gradient(150deg, #3d4c66, #1f2c44); }
+.mm-badge-commodity.goldbars { background: linear-gradient(150deg, #3a3320, #211b10); }
+.mm-glyph { width: 21px; height: 21px; }
+.mm-badge-commodity .mm-glyph-barrel,
+.mm-badge-commodity .mm-glyph-gold { width: 27px; height: 27px; }
+
+/* crypto — brand logo coin (falls back to a ticker chip) */
+.mm-coin-logo {
+  width: 40px; height: 40px; border-radius: 50%; object-fit: contain; display: block;
+  background: #fff; box-shadow: 0 1px 3px rgba(23,35,63,0.20), inset 0 0 0 1px rgba(23,35,63,0.08);
+}
+.mm-coin-fallback {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-family: var(--font-ui); font-size: 11.5px; font-weight: 700; letter-spacing: 0.02em;
+  box-shadow: 0 1px 3px rgba(23,35,63,0.24);
+}
+
+/* ---------- skeleton first paint ---------- */
+.mm-skel-block { border-radius: 6px; background: linear-gradient(90deg, #eeedea 25%, #f7f6f3 50%, #eeedea 75%); background-size: 200% 100%; animation: mm-shimmer 1.3s ease-in-out infinite; }
+@keyframes mm-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+.mm-skel-name { width: 70%; height: 14px; }
+.mm-skel-val { width: 80%; height: 18px; margin-left: auto; }
+.mm-skel-chip { width: 60px; height: 20px; border-radius: 999px; }
+.mm-skel-spark { width: 100%; height: 26px; }
+
+/* ---------- panel footer ---------- */
+.mm-panel-foot {
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--dm-grey-1);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.mm-foot-key { display: inline-flex; align-items: center; gap: 14px; font-family: var(--font-ui); font-size: 10.5px; font-weight: 600; color: var(--dm-ink-4); flex-wrap: wrap; }
+.mm-foot-key .k { display: inline-flex; align-items: center; gap: 5px; }
+.mm-foot-key .kd { width: 7px; height: 7px; border-radius: 50%; }
+.mm-foot-key .kd.up { background: var(--dm-green); } .mm-foot-key .kd.down { background: var(--dm-red); }
+.mm-foot-note { font-family: var(--font-ui); font-size: 10.5px; letter-spacing: 0.03em; color: var(--dm-ink-5); }
+
+/* ---------- page footer ---------- */
+.mm-foot { text-align: center; padding: 20px 28px 40px; max-width: 640px; margin: 0 auto; }
+.mm-foot p { font-family: var(--font-serif); font-size: 13px; line-height: 1.55; color: var(--dm-ink-4); margin: 0; }
+.mm-foot-meta { font-family: var(--font-ui); font-size: 11px; letter-spacing: 0.04em; color: var(--dm-ink-5); margin-top: 10px; }
+
+/* keep the export crisp — fixed width + table layout + no shadow on the captured node */
+/* capture at the live on-screen width (no forced widening) so the PNG matches what's shown */
+.mm-panel.capturing { box-shadow: none; }
+.mm-panel.capturing .mm-thead { display: grid; }
+.mm-panel.capturing .mm-table:not(.crypto) .mm-thead,
+.mm-panel.capturing .mm-table:not(.crypto) .mm-tr {
+  grid-template-columns: minmax(0,2.1fr) minmax(0,1.25fr) minmax(0,1.3fr) minmax(0,1.1fr) minmax(0,1.1fr);
+  grid-template-areas: none;
+  align-items: center;
+}
+.mm-panel.capturing .mm-c-label { display: none; }
+.mm-panel.capturing .mm-c-24h { display: flex; }
+.mm-panel.capturing .mm-c-ytd, .mm-panel.capturing .mm-c-1m { border-left: 2px solid var(--rule-strong); text-align: center; }
+
+/* =====================================================================
+   BLOCK B — Crypto Market Moves table
+   Reuses the .mm-table row engine with its own 5-column geometry:
+   Crypto · Price (USD) · Price (ZAR) · 24h · 365-day (distinct lane).
+   ===================================================================== */
+.mm-table.crypto .mm-thead,
+.mm-table.crypto .mm-tr {
+  grid-template-columns:
+    minmax(0, 2.0fr)   /* crypto identity */
+    minmax(0, 1.35fr)  /* price USD       */
+    minmax(0, 1.35fr)  /* price ZAR       */
+    minmax(0, 1.0fr)   /* 24h             */
+    minmax(0, 1.15fr); /* 365-day lane    */
+}
+.mm-table.crypto .mm-th-365 { border-left: 2px solid rgba(255,255,255,0.28); color: #fff; }
+
+/* dual-currency price cells */
+.mm-c-usd, .mm-c-zar { text-align: right; }
+.mm-c-usd .mm-value, .mm-c-zar .mm-value { font-size: 20px; }
+.mm-c-usd .mm-value.long, .mm-c-zar .mm-value.long { font-size: 16.5px; }
+.mm-cur { display: block; font-family: var(--font-ui); font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dm-ink-5); margin-bottom: 3px; }
+
+/* 365-day lane — mirrors the YTD lane from Block A */
+.mm-c-365 {
+  border-left: 2px solid var(--rule-strong);
+  background: rgba(23,35,63,0.035);
+  text-align: right;
+}
+.mm-c-365.up   { background: color-mix(in srgb, var(--dm-green) 12%, #fff); }
+.mm-c-365.down { background: color-mix(in srgb, var(--dm-red) 10%, #fff); }
+.mm-c-365.flat { background: rgba(23,35,63,0.035); }
+.mm-c-365 .mm-ytd-val { font-size: 15px; }
+
+/* circular brand badge for coins */
+.mm-badge.coin { border-radius: 50%; border: none; background: var(--dm-ink-3); }
+.mm-badge.coin .mm-ticker { font-family: var(--font-ui); font-size: 10px; font-weight: 700; letter-spacing: 0.02em; color: #fff; }
+.mm-badge.coin .mm-glyph-btc { font-size: 20px; color: #fff; }
+
+/* =====================================================================
+   BLOCK C — Crypto Fear & Greed Index gauge
+   ===================================================================== */
+.fg { display: grid; grid-template-columns: 1.35fr 1fr; gap: 26px 34px; align-items: center; }
+.fg-gaugewrap { display: flex; flex-direction: column; align-items: center; }
+.fg-gauge { position: relative; width: 100%; max-width: 420px; }
+.fg-gauge svg { display: block; width: 100%; height: auto; overflow: visible; }
+.fg-ends { display: flex; justify-content: space-between; width: 100%; max-width: 420px; margin-top: 10px; padding: 0 4px; font-family: var(--font-ui); font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* right column — 7-day sparkline + history stats */
+.fg-history { display: flex; flex-direction: column; gap: 0; }
+.fg-spark { padding-bottom: 14px; }
+.fg-spark svg { display: block; width: 100%; height: auto; }
+.fg-spark-title { font-family: var(--font-ui); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dm-ink-4); margin-bottom: 6px; }
+.fg-spark-axis { display: flex; justify-content: space-between; margin-top: 2px; font-family: var(--font-ui); font-size: 10px; font-weight: 600; letter-spacing: 0.03em; color: var(--dm-ink-5); }
+.fg-stat { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-top: 1px solid var(--dm-grey-1); }
+.fg-stat-meta { min-width: 0; }
+.fg-stat-when { display: flex; align-items: center; gap: 7px; font-family: var(--font-ui); font-size: 12px; font-weight: 600; letter-spacing: 0.03em; color: var(--dm-ink-4); }
+.fg-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dm-ink-1); flex: none; }
+.fg-dot.hollow { background: #fff; border: 2px solid var(--dm-ink-1); width: 8px; height: 8px; }
+.fg-stat-class { font-family: var(--font-ui); font-size: 15px; font-weight: 700; margin-top: 3px; }
+.fg-stat-right { display: flex; align-items: center; gap: 12px; }
+.fg-chip { font-family: var(--font-ui); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 3px 8px; border-radius: 999px; background: var(--dm-grey-1); color: var(--dm-ink-4); white-space: nowrap; }
+.fg-chip.up { background: rgba(59, 107, 46, 0.12); color: #3B6B2E; }
+.fg-chip.down { background: rgba(211, 61, 61, 0.10); color: #D33D3D; }
+.fg-stat-val { font-family: var(--font-display); font-weight: 700; font-size: 38px; line-height: 1; color: var(--dm-ink-1); font-variant-numeric: tabular-nums; }
+.fg-stat-val.dash { color: var(--dm-ink-5); }
+
+/* full-width sentiment scale band (mirrored: greed left → fear right) */
+.fg-scale { grid-column: 1 / -1; margin-top: 2px; }
+.fg-scale-track { position: relative; height: 12px; border-radius: 999px; overflow: hidden; }
+.fg-scale-seg { position: absolute; top: 0; bottom: 0; }
+.fg-scale-marker {
+  position: absolute; top: -6px; width: 3px; height: 24px; border-radius: 2px;
+  background: var(--dm-ink-1); box-shadow: 0 0 0 2px #fff; transform: translateX(-50%);
+}
+.fg-scale-labels { display: flex; justify-content: space-between; margin-top: 9px; font-family: var(--font-ui); font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--dm-ink-5); }
+.fg-explain { grid-column: 1 / -1; font-family: var(--font-serif); font-size: 14px; line-height: 1.55; color: var(--dm-ink-3); margin: 4px 0 0; }
+.fg-explain b { font-weight: 700; color: var(--dm-ink-1); }
+
+/* ---------- responsive: stack rows on narrow screens ---------- */
+@media (max-width: 720px) {
+  .mm-panel { padding: 22px 16px 16px; }
+  .mm-thead { display: none; }
+  .mm-table:not(.crypto) .mm-tr {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "market market"
+      "price  day"
+      "m1     ytd";
+    gap: 12px 14px;
+    padding: 16px 14px;
+    align-items: end;
+  }
+  .mm-table.crypto .mm-tr {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "market market"
+      "usd    zar"
+      "day    y365";
+    gap: 12px 14px;
+    padding: 16px 14px;
+    align-items: end;
+  }
+  .mm-c { padding: 0; }
+  .mm-c-market { grid-area: market; align-items: center; }
+  .mm-c-price  { grid-area: price; text-align: left; }
+  .mm-c-usd    { grid-area: usd; text-align: left; }
+  .mm-c-zar    { grid-area: zar; text-align: left; }
+  .mm-c-24h    { grid-area: day; }
+  .mm-c-1m     { grid-area: m1; background: none !important; text-align: left; padding-left: 14px; border-left: 2px solid var(--rule-strong); }
+  .mm-c-ytd    { grid-area: ytd; background: none !important; text-align: left; padding-left: 14px; border-left: 2px solid var(--rule-strong); }
+  .mm-c-365    { grid-area: y365; background: none !important; text-align: left; padding-left: 14px; border-left: 2px solid var(--rule-strong); }
+  .mm-c-label  { display: block; }
+  .mm-ytd-val, .mm-pctval { justify-content: flex-start; }
+  .mm-c-price .mm-value, .mm-c-usd .mm-value, .mm-c-zar .mm-value { font-size: 22px; }
+  .mm-cur { display: none; }
+
+  .fg { grid-template-columns: 1fr; gap: 20px; }
+  .fg-value { font-size: 64px; }
+}
+
+/* narrow crypto badge tweak stays crisp during capture */
+.mm-panel.capturing .mm-table.crypto .mm-thead,
+.mm-panel.capturing .mm-table.crypto .mm-tr {
+  grid-template-columns: minmax(0,2.0fr) minmax(0,1.35fr) minmax(0,1.35fr) minmax(0,1.0fr) minmax(0,1.15fr);
+  grid-template-areas: none;
+  align-items: center;
+}
+.mm-panel.capturing .mm-c-usd, .mm-panel.capturing .mm-c-zar { text-align: right; }
+.mm-panel.capturing .mm-cur { display: block; }
+.mm-panel.capturing .mm-c-365 { border-left: 2px solid var(--rule-strong); text-align: right; }

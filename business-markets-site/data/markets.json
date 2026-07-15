@@ -1,0 +1,7 @@
+{
+  "am": null,
+  "pm": null,
+  "meta": {
+    "note": "Seed file. The GitHub Action overwrites this at 05:30 and 17:00 SAST. Until it runs, the page captures values in the browser once and freezes those."
+  }
+}
