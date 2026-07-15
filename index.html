@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Moves — Business Maverick · Daily Maverick</title>
+<link rel="stylesheet" href="dm-tokens.css">
+<link rel="stylesheet" href="markets.css">
+<style>
+  html, body { margin: 0; min-height: 100%; }
+  body { background: #ECEAE4; }
+  a { color: var(--dm-red); text-decoration: none; }
+  a:hover { color: var(--dm-red-dark); text-decoration: underline; }
+  /* bare cards — last row meets the rounded edge */
+  .mm-table .mm-tr:last-child .mm-c { padding-bottom: 20px; }
+  /* page lede under the kicker */
+  .mm-lede {
+    font-family: var(--font-serif); font-size: 15px; line-height: 1.55;
+    color: var(--dm-ink-3); max-width: 640px; margin: 0 auto;
+  }
+  .mm-lede b { font-family: var(--font-ui); font-weight: 700; color: var(--dm-ink-1); font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+  /* the "updated at / date" line that sits above each card */
+  .mm-snaphead { flex-direction: column; align-items: flex-start; gap: 7px; }
+  .mm-snapmeta {
+    display: inline-flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    font-family: var(--font-ui);
+  }
+  .mm-snaptime { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; color: var(--dm-ink-1); }
+  .mm-snapdot  { color: var(--dm-grey-2); font-weight: 700; }
+  .mm-snapdate { font-size: 14px; font-weight: 600; color: var(--dm-ink-3); }
+  .mm-snaptz {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--dm-ink-5); border: 1px solid var(--dm-grey-1); border-radius: 999px; padding: 2px 7px;
+    align-self: center;
+  }
+</style>
+</head>
+<body>
+<div id="mm-root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/dist/html-to-image.js"></script>
+<script src="fonts-embed.js"></script>
+<script src="mm-core.js"></script>
+<script src="mm-app.js"></script>
+</body>
+</html>
