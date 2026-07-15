@@ -1,0 +1,49 @@
+name: Update market snapshot
+
+on:
+  schedule:
+    # GitHub Actions cron is in UTC. SAST = UTC+2 (no daylight saving).
+    - cron: "30 3 * * *"    # 05:30 SAST  → morning snapshot
+    - cron: "0 15 * * *"    # 17:00 SAST  → afternoon snapshot
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "Which slot to capture (am / pm). Leave blank to auto-pick by time."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mm-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build the snapshot (fetches markets server-side)
+        env:
+          SLOT: ${{ github.event.inputs.slot }}
+        run: node scripts/build-snapshot.mjs
+
+      - name: Commit snapshot if it changed
+        run: |
+          git config user.name "mm-snapshot-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/markets.json
+          if git diff --staged --quiet; then
+            echo "No change in snapshot — nothing to commit."
+          else
+            git commit -m "Update market snapshot (${{ github.run_id }})"
+            git push
+          fi
