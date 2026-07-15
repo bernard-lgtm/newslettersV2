@@ -1,15 +1,7 @@
 // ============================================================================
 // Market Moves snapshot builder — runs inside GitHub Actions (Node 20+)
-// ----------------------------------------------------------------------------
-// Runs at 05:30 and 17:00 SAST (see .github/workflows/update-markets.yml).
-// Fetches every market SERVER-SIDE (no browser CORS limits, no token needed —
-// all feeds are public), computes { price, d1, m1, ytd } per instrument, and
-// writes the values into ONE slot ("am" or "pm") of data/markets.json. The
-// other slot is preserved. The page (index.html) reads that file and freezes
-// each card to its slot.
-//
-// Slot selection: the current SAST hour decides it — before midday → "am",
-// otherwise → "pm". Override with the SLOT env var ("am" | "pm") if needed.
+// Runs at 05:30 and 17:00 SAST. Fetches every market SERVER-SIDE and writes
+// one slot ("am"/"pm") of data/markets.json, preserving the other slot.
 // ============================================================================
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
@@ -27,7 +19,6 @@ const INSTRUMENTS = [
 
 const UA = "Mozilla/5.0 (compatible; DM-MarketMoves/1.0; +https://www.dailymaverick.co.za)";
 
-// --- SAST helpers (UTC+2, no DST) ---
 function sastParts(d) {
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Africa/Johannesburg", year: "numeric", month: "2-digit",
@@ -46,7 +37,6 @@ if (slot !== "am" && slot !== "pm") {
   process.exit(1);
 }
 
-// --- number crunching (ported from the widget's mm-core.js) ---
 function statsFromSeries(series, opts = {}) {
   if (!series || series.length < 2) return null;
   const price = opts.price != null ? opts.price : series[series.length - 1].c;
@@ -80,7 +70,16 @@ async function fetchYahoo(symbol) {
   const closes = r.indicators?.quote?.[0]?.close || [];
   const series = [];
   for (let i = 0; i < ts.length; i++) if (closes[i] != null) series.push({ t: ts[i] * 1000, c: closes[i] });
-  return statsFromSeries(series, { price: r.meta.regularMarketPrice, prevClose: r.meta.chartPreviousClose });
+  const m = r.meta;
+  const price = m.regularMarketPrice != null ? m.regularMarketPrice
+              : (series.length ? series[series.length - 1].c : null);
+  // TRUE previous-session close for the 24h change — NOT chartPreviousClose,
+  // which is the close from BEFORE the 1-year window began (~a year ago) and
+  // turned "24h" into a ~1-year change (the JSE +13.5% / S&P +20% bug).
+  const prevClose = m.regularMarketPreviousClose != null ? m.regularMarketPreviousClose
+                  : m.previousClose != null ? m.previousClose
+                  : (series.length >= 2 ? series[series.length - 2].c : null);
+  return statsFromSeries(series, { price, prevClose });
 }
 
 async function fetchFx(from) {
@@ -108,7 +107,6 @@ function fetchInstrument(inst) {
   return fetchYahoo(inst.ysym);
 }
 
-// --- build the slot ---
 const data = {};
 let hits = 0;
 for (const inst of INSTRUMENTS) {
@@ -128,12 +126,10 @@ for (const inst of INSTRUMENTS) {
 }
 
 if (hits === 0) {
-  // Total failure — do NOT overwrite the last good file. Exit non-zero.
   console.error("Every feed failed — leaving data/markets.json untouched.");
   process.exit(1);
 }
 
-// --- merge into data/markets.json, preserving the other slot ---
 let existing = {};
 try { existing = JSON.parse(await readFile("data/markets.json", "utf8")) || {}; } catch { /* first run */ }
 
